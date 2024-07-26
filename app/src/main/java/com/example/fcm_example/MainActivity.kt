@@ -6,6 +6,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.fcm_example.Constants.TAG
+import com.example.fcm_example.databinding.ActivityMainBinding
 import com.example.fcm_example.models.FcmMessage
 import com.example.fcm_example.models.FcmNotification
 import com.google.android.gms.tasks.OnCompleteListener
@@ -18,9 +19,11 @@ import kotlinx.coroutines.launch
 
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityMainBinding
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
             if (!task.isSuccessful) {
@@ -29,51 +32,88 @@ class MainActivity : AppCompatActivity() {
             }
             // Get FCM registration token
             val token = task.result
-            println(token)
-            val notification = FcmNotification(
-                "Title",
-                "Body"
-            )
-            val fcmMessage = FcmMessage(
-                "elck92A0TGGxWm8t3_mqoi:APA91bHEjDID6qS_Gp7h8fj6uB8BymTynjAev_kjLlaqUReoaN569lu4Y1F7MosaZ1bvVUWmvnf7RbZnc6fHTVs5e6kfnQ-mdshJBFqIDKnl0XdrxXDXPOFn8tRFlRSBBkP8_tnqjGs-",
-                notification,
-                null
-            )
-            CoroutineScope(Dispatchers.IO).launch {
-                RetrofitInstance.api.sendMessage(fcmMessage)
-            }
+            binding.etToken.setText(token)
+
             // Send token to server
         })
 
-//        // Subscribing to Topic
-//        FirebaseMessaging.getInstance().subscribeToTopic("News")
-//
-//
-//        val notification = FcmNotification(
-//            "Title",
-//            "Body"
-//        )
-//        // For Device
-//        val fcmMessage = FcmMessage(
-//            token,
-//            notification,
-//            null
-//        )
-//        // For Topic
-//        val topic = "News"
-//        val data: Map<String, String> = mapOf(
-//            "key1" to "value1",
-//            "key2" to "value2",
-//        )
-//        val fcmMessageForTopic =  FcmMessage(
-//            "/topics/$topic",
-//            notification,
-//            data
-//        )
-//
-//        CoroutineScope(Dispatchers.IO).launch {
-//            RetrofitInstance.api.sendMessage(fcmMessage)
-//        }
+        initListeners()
 
     }
+
+    private fun initListeners() {
+        binding?.apply {
+
+            btnSendOnToken.setOnClickListener {
+                if (!etToken.text.isNullOrBlank()) {
+                    val notification = FcmNotification(
+                        "My Fcm Title",
+                        "Hello user how are you"
+                    )
+                    sendNotificationOnToken(notification,etToken.text.toString(),null)
+                } else {
+                    Toast.makeText(this@MainActivity, "Token is empty", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            btnSubscribe.setOnClickListener {
+                if (!etTopicToSubsCribe.text.isNullOrBlank()) {
+                    subscribeToTopic(etTopicToSubsCribe.text.toString())
+                } else {
+                    Toast.makeText(this@MainActivity, "Topic is empty", Toast.LENGTH_SHORT).show()
+                }
+
+            }
+
+            btnSendOnTopic.setOnClickListener {
+                if (!etTopic.text.isNullOrBlank()) {
+                    val topic  = etTopic.text.toString()
+                    val notification = FcmNotification(
+                        topic,
+                        "Notification from topic"
+                    )
+                    sendNotificationOnTopic(notification,etTopic.text.toString(),null)
+                } else {
+                    Toast.makeText(this@MainActivity, "Topic is empty", Toast.LENGTH_SHORT).show()
+                }
+
+            }
+        }
+    }
+
+    private fun subscribeToTopic(topic: String) {
+        // Subscribing to Topic
+        FirebaseMessaging.getInstance().subscribeToTopic(topic)
+    }
+
+    private fun sendNotificationOnToken(
+        notification: FcmNotification,
+        token: String,
+        data: Map<String, String>?,
+    ) {
+        val fcmMessage = FcmMessage(
+            notification = notification,
+            to = token,
+            data = data
+        )
+        CoroutineScope(Dispatchers.IO).launch {
+            RetrofitInstance.api.sendMessage(fcmMessage)
+        }
+    }
+
+    private fun sendNotificationOnTopic(
+        notification: FcmNotification,
+        topic: String,
+        data: Map<String, String>?,
+    ) {
+        val fcmMessage = FcmMessage(
+            notification = notification,
+            to = "/topics/$topic",
+            data = data
+        )
+        CoroutineScope(Dispatchers.IO).launch {
+            RetrofitInstance.api.sendMessage(fcmMessage)
+        }
+    }
+
 }
